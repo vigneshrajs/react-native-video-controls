@@ -1068,7 +1068,7 @@ export default class VideoPlayer extends Component {
           imageStyle={[styles.controls.vignette]}>
           {seekbarControl}
           <SafeAreaView
-            style={[styles.controls.row, styles.controls.bottomControlGroup,{flexDirection:isRTL?'row-reverse':'row',}]}>
+            style={[styles.controls.row, styles.controls.bottomControlGroup,this.state.isRTL&&{flexDirection:'row-reverse'}]}>
             {playPauseControl}
             {this.renderTitle()}
             {timerControl}
@@ -1299,6 +1299,7 @@ const styles = {
   }),
   controls: StyleSheet.create({
     row: {
+      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       height: null,
