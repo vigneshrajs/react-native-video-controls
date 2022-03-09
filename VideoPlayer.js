@@ -33,6 +33,7 @@ export default class VideoPlayer extends Component {
     rate: 1,
     showTimeRemaining: true,
     showHours: false,
+    isRTL:false
   };
 
   constructor(props) {
@@ -70,6 +71,7 @@ export default class VideoPlayer extends Component {
       currentTime: 0,
       error: false,
       duration: 0,
+      isRTL:this.props.isRTL
     };
 
     /**
@@ -1066,7 +1068,7 @@ export default class VideoPlayer extends Component {
           imageStyle={[styles.controls.vignette]}>
           {seekbarControl}
           <SafeAreaView
-            style={[styles.controls.row, styles.controls.bottomControlGroup]}>
+            style={[styles.controls.row, styles.controls.bottomControlGroup,isRTL&&{flexDirection:'row-reverse'}]}>
             {playPauseControl}
             {this.renderTitle()}
             {timerControl}
