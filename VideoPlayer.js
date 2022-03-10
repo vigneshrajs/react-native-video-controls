@@ -12,6 +12,7 @@ import {
   Image,
   View,
   Text,
+  I18nManager,
 } from 'react-native';
 import padStart from 'lodash/padStart';
 
@@ -33,7 +34,6 @@ export default class VideoPlayer extends Component {
     rate: 1,
     showTimeRemaining: true,
     showHours: false,
-    isRTL:false
   };
 
   constructor(props) {
@@ -71,7 +71,6 @@ export default class VideoPlayer extends Component {
       currentTime: 0,
       error: false,
       duration: 0,
-      isRTL:this.props.isRTL
     };
 
     /**
@@ -234,6 +233,7 @@ export default class VideoPlayer extends Component {
 
       if (!state.seeking) {
         const position = this.calculateSeekerPosition();
+        // console.log(position);
         this.setSeekerPosition(position);
       }
 
@@ -595,7 +595,6 @@ export default class VideoPlayer extends Component {
   setSeekerPosition(position = 0) {
     let state = this.state;
     position = this.constrainToSeekerMinMax(position);
-
     state.seekerFillWidth = position;
     state.seekerPosition = position;
 
@@ -615,12 +614,23 @@ export default class VideoPlayer extends Component {
    * @return {float} constrained position of seeker handle in px
    */
   constrainToSeekerMinMax(val = 0) {
-    if (val <= 0) {
-      return 0;
-    } else if (val >= this.player.seekerWidth) {
-      return this.player.seekerWidth;
-    }
-    return val;
+    // console.log(this.player.seekerWidth);
+    // if(I18nManager.isRTL){
+    //   if (val <= 0) {
+    //     return this.player.seekerWidth;
+    //   } else if (val >= this.player.seekerWidth) {
+    //     return val;
+    //   }
+    //   return val;
+    // }
+    // else{
+      if (val <= 0) {
+        return 0;
+      } else if (val >= this.player.seekerWidth) {
+        return this.player.seekerWidth;
+      }
+      return val;
+    // }
   }
 
   /**
@@ -631,7 +641,8 @@ export default class VideoPlayer extends Component {
    */
   calculateSeekerPosition() {
     const percent = this.state.currentTime / this.state.duration;
-    return this.player.seekerWidth * percent;
+    // return this.player.seekerWidth * percent;
+    return I18nManager.isRTL?this.player.seekerWidth * (1 - percent):this.player.seekerWidth * percent;
   }
 
   /**
@@ -642,7 +653,8 @@ export default class VideoPlayer extends Component {
    */
   calculateTimeFromSeekerPosition() {
     const percent = this.state.seekerPosition / this.player.seekerWidth;
-    return this.state.duration * percent;
+    // return this.state.duration * percent;
+    return I18nManager.isRTL?this.state.duration * (1 - percent):this.state.duration * percent;
   }
 
   /**
@@ -666,7 +678,7 @@ export default class VideoPlayer extends Component {
     let state = this.state;
     position = this.constrainToVolumeMinMax(position);
     state.volumePosition = position + this.player.iconOffset;
-    state.volumeFillWidth = position;
+    state.volumeFillWidth = I18nManager.isRTL?position-7:position;
 
     state.volumeTrackWidth = this.player.volumeWidth - state.volumeFillWidth;
 
@@ -797,7 +809,7 @@ export default class VideoPlayer extends Component {
       onPanResponderGrant: (evt, gestureState) => {
         let state = this.state;
         this.clearControlTimeout();
-        const position = evt.nativeEvent.locationX;
+        const position = I18nManager.isRTL?this.player.seekerWidth-evt.nativeEvent.locationX:evt.nativeEvent.locationX;
         this.setSeekerPosition(position);
         state.seeking = true;
         state.originallyPaused = state.paused;
@@ -812,7 +824,12 @@ export default class VideoPlayer extends Component {
        * When panning, update the seekbar position, duh.
        */
       onPanResponderMove: (evt, gestureState) => {
-        const position = this.state.seekerOffset + gestureState.dx;
+        let position = this.state.seekerOffset + gestureState.dx
+        if(I18nManager.isRTL){
+          position = this.state.seekerOffset - gestureState.dx;
+        }
+          // const position =  this.state.seekerOffset + I18nManager.isRTL?(1 - gestureState.dx):gestureState.dx;
+        // const position = this.state.seekerOffset - gestureState.dx;
         this.setSeekerPosition(position);
         let state = this.state;
 
@@ -880,8 +897,9 @@ export default class VideoPlayer extends Component {
        */
       onPanResponderMove: (evt, gestureState) => {
         let state = this.state;
-        const position = this.state.volumeOffset + gestureState.dx;
-
+        // const position = this.state.volumeOffset + gestureState.dx;
+        // const position = I18nManager.isRTL?this.state.volumeOffset + (1 - gestureState.dx):this.state.volumeOffset + gestureState.dx;
+        let position = this.state.volumeOffset + gestureState.dx
         this.setVolumePosition(position);
         state.volume = this.calculateVolumeFromVolumePosition();
 
@@ -974,9 +992,9 @@ export default class VideoPlayer extends Component {
           source={require('./assets/img/top-vignette.png')}
           style={[styles.controls.column]}
           imageStyle={[styles.controls.vignette]}>
-          <SafeAreaView style={styles.controls.topControlGroup}>
+          <SafeAreaView style={[styles.controls.topControlGroup]}>
             {backControl}
-            <View style={styles.controls.pullRight}>
+            <View style={[styles.controls.pullRight]}>
               {volumeControl}
               {fullscreenControl}
             </View>
@@ -1035,7 +1053,7 @@ export default class VideoPlayer extends Component {
     return this.renderControl(
       <Image source={source} />,
       this.methods.toggleFullscreen,
-      styles.controls.fullscreen,
+      [styles.controls.fullscreen],
     );
   }
 
@@ -1067,12 +1085,18 @@ export default class VideoPlayer extends Component {
           style={[styles.controls.column]}
           imageStyle={[styles.controls.vignette]}>
           {seekbarControl}
-          <SafeAreaView
-            style={[styles.controls.row, styles.controls.bottomControlGroup,this.state.isRTL&&{flexDirection:'row-reverse'}]}>
+          {I18nManager.isRTL?<SafeAreaView
+            style={[styles.controls.row, styles.controls.bottomControlGroup]}>
+            {timerControl}
+            {this.renderTitle()}
+            {playPauseControl}
+          </SafeAreaView>:<SafeAreaView
+            style={[styles.controls.row, styles.controls.bottomControlGroup]}>
             {playPauseControl}
             {this.renderTitle()}
             {timerControl}
           </SafeAreaView>
+          }
         </ImageBackground>
       </Animated.View>
     );
@@ -1325,7 +1349,7 @@ const styles = {
       textAlign: 'center',
     },
     pullRight: {
-      flexDirection: 'row',
+      flexDirection: I18nManager.isRTL?'row-reverse':'row',
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -1343,7 +1367,7 @@ const styles = {
       alignSelf: 'stretch',
       alignItems: 'center',
       justifyContent: 'space-between',
-      flexDirection: 'row',
+      flexDirection: I18nManager.isRTL?'row-reverse':'row',
       width: null,
       margin: 12,
       marginBottom: 18,
@@ -1352,19 +1376,18 @@ const styles = {
       alignSelf: 'stretch',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginLeft: 12,
-      marginRight: 12,
+      margin: 12,
       marginBottom: 0,
     },
     volume: {
-      flexDirection: 'row',
+      flexDirection: I18nManager.isRTL?'row-reverse':'row',
     },
     fullscreen: {
-      flexDirection: 'row',
+      flexDirection: I18nManager.isRTL?'row-reverse':'row',
     },
     playPause: {
       position: 'relative',
-      width: 80,
+      // width: 80,
       zIndex: 0,
     },
     title: {
@@ -1383,18 +1406,19 @@ const styles = {
       backgroundColor: 'transparent',
       color: '#FFF',
       fontSize: 11,
-      textAlign: 'right',
+      textAlign: I18nManager.isRTL ?'left':'right',
     },
   }),
   volume: StyleSheet.create({
     container: {
       alignItems: 'center',
-      justifyContent: 'flex-start',
-      flexDirection: 'row',
+      justifyContent: I18nManager.isRTL?'flex-start':'flex-end',
+      flexDirection: I18nManager.isRTL?'row-reverse':'row',
       height: 1,
       marginLeft: 20,
       marginRight: 20,
       width: 150,
+      zIndex:99,
     },
     track: {
       backgroundColor: '#333',
@@ -1423,14 +1447,14 @@ const styles = {
       marginRight: 20,
     },
     track: {
-      backgroundColor: '#333',
+      backgroundColor: I18nManager.isRTL?'#FFF':'#333',
       height: 1,
       position: 'relative',
       top: 14,
       width: '100%',
     },
     fill: {
-      backgroundColor: '#FFF',
+      backgroundColor: I18nManager.isRTL?'#333':'#FFF',
       height: 1,
       width: '100%',
     },
